@@ -94,7 +94,7 @@ function startLanguageServer() {
   vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window },
     (progress) => {
-      return new Promise((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         if (!extensionContext) {
           //something very bad happened!
           resolve();
@@ -153,7 +153,7 @@ function startLanguageServer() {
           executable,
           clientOptions
         );
-        languageClient.onReady().then(resolve, (reason) => {
+        languageClient.onReady().then(resolve, (reason: any) => {
           resolve();
           vscode.window.showErrorMessage(STARTUP_ERROR);
         });
