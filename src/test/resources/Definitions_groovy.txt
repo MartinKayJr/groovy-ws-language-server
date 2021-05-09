@@ -1,0 +1,3 @@
+class Definitions {
+  public int memberVar
+}
