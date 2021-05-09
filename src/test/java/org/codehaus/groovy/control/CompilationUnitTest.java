@@ -10,6 +10,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 
 public class CompilationUnitTest {
 	public static CompilationUnit compilationUnit;
@@ -27,6 +28,7 @@ public class CompilationUnitTest {
 		compilationUnit.addSource(sourceUnit);
 		compilationUnit.compile(6);
 		FieldNode field = compilationUnit.getAST().getClass("Definitions").getField("memberVar");
+		List<FieldNode> fields = compilationUnit.getAST().getClass("Definitions").getFields();
 		System.out.println();
 	}
 }
