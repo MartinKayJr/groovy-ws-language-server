@@ -1,12 +1,13 @@
 package org.codehaus.groovy.control;
 
+import com.google.common.io.CharStreams;
+import lombok.SneakyThrows;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.control.io.FileReaderSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -19,12 +20,13 @@ public class CompilationUnitTest {
 	}
 	
 	@Test
-	public void test() throws IOException {
-		String file = "E:\\Workspace\\github\\groovy-language-server\\src\\test\\resources\\Definitions_groovy.txt";
-		
-		SourceUnit sourceUnit = SourceUnit.create("Definitions.groovy", new String(Files.readAllBytes(Paths.get(file))));
+	@SneakyThrows
+	public void test() {
+		InputStream inputStream = new ClassPathResource("Definitions_groovy.txt").getInputStream();
+		SourceUnit sourceUnit = SourceUnit.create("Definitions.groovy", CharStreams.toString(new InputStreamReader(inputStream)));
 		compilationUnit.addSource(sourceUnit);
 		compilationUnit.compile(6);
+		FieldNode field = compilationUnit.getAST().getClass("Definitions").getField("memberVar");
 		System.out.println();
 	}
 }
