@@ -11,6 +11,9 @@ java {
 test {
     useJUnitPlatform()
 }
+group 'net.prominic.groovyls'
+version '1.0-SNAPSHOT'
+apply plugin: 'maven'
 
 ext.mainClass = "net.prominic.groovyls.GroovyLanguageServer"
 
