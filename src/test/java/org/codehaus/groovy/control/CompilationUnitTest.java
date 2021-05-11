@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.*;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -30,5 +31,13 @@ public class CompilationUnitTest {
 		FieldNode field = compilationUnit.getAST().getClass("Definitions").getField("memberVar");
 		List<FieldNode> fields = compilationUnit.getAST().getClass("Definitions").getFields();
 		System.out.println();
+	}
+	
+	@Test
+	@SneakyThrows
+	public void test1(){
+		URI uri = new URI("inmemory://model/1");
+		String scheme = uri.getScheme();
+		System.out.println(uri.getPath());
 	}
 }

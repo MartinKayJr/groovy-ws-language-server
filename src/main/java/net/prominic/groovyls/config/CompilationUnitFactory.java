@@ -19,6 +19,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 package net.prominic.groovyls.config;
 
+import groovy.lang.GroovyClassLoader;
+import net.prominic.groovyls.compiler.control.GroovyLSCompilationUnit;
+import net.prominic.groovyls.compiler.control.io.StringReaderSourceWithURI;
+import net.prominic.groovyls.util.FileContentsTracker;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.SourceUnit;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -27,44 +34,37 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-
-import org.codehaus.groovy.control.CompilerConfiguration;
-import org.codehaus.groovy.control.SourceUnit;
-
-import groovy.lang.GroovyClassLoader;
-import net.prominic.groovyls.compiler.control.GroovyLSCompilationUnit;
-import net.prominic.groovyls.compiler.control.io.StringReaderSourceWithURI;
-import net.prominic.groovyls.util.FileContentsTracker;
 
 public class CompilationUnitFactory implements ICompilationUnitFactory {
 	private static final String FILE_EXTENSION_GROOVY = ".groovy";
-
+	private static final String INMEMORY = "inmemory";
 	private GroovyLSCompilationUnit compilationUnit;
 	private List<String> additionalClasspathList;
-
+	
 	public CompilationUnitFactory() {
 	}
-
+	
 	public List<String> getAdditionalClasspathList() {
 		return additionalClasspathList;
 	}
-
+	
 	public void setAdditionalClasspathList(List<String> additionalClasspathList) {
 		this.additionalClasspathList = additionalClasspathList;
 		invalidateCompilationUnit();
 	}
-
+	
 	public void invalidateCompilationUnit() {
 		compilationUnit = null;
 	}
-
+	
 	public GroovyLSCompilationUnit create(Path workspaceRoot, FileContentsTracker fileContentsTracker) {
 		CompilerConfiguration config = getConfiguration();
-
+		
 		GroovyClassLoader classLoader = new GroovyClassLoader(ClassLoader.getSystemClassLoader().getParent(), config,
-				true);
-
+			true);
+		
 		Set<URI> changedUris = fileContentsTracker.getChangedURIs();
 		if (compilationUnit == null) {
 			compilationUnit = new GroovyLSCompilationUnit(config, null, classLoader);
@@ -84,7 +84,7 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 			//that a new version can be built from the updated source file
 			compilationUnit.removeSources(sourcesToRemove);
 		}
-
+		
 		if (workspaceRoot != null) {
 			addDirectoryToCompilationUnit(workspaceRoot, compilationUnit, fileContentsTracker, changedUris);
 		} else {
@@ -99,32 +99,32 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 				addOpenFileToCompilationUnit(uri, contents, compilationUnit);
 			});
 		}
-
+		
 		return compilationUnit;
 	}
-
+	
 	protected CompilerConfiguration getConfiguration() {
 		CompilerConfiguration config = new CompilerConfiguration();
-
+		
 		List<String> classpathList = new ArrayList<>();
 		getClasspathList(classpathList);
 		config.setClasspathList(classpathList);
-
+		
 		return config;
 	}
-
+	
 	protected void getClasspathList(List<String> result) {
 		if (additionalClasspathList == null) {
 			return;
 		}
-
+		
 		for (String entry : additionalClasspathList) {
 			boolean mustBeDirectory = false;
 			if (entry.endsWith("*")) {
 				entry = entry.substring(0, entry.length() - 1);
 				mustBeDirectory = true;
 			}
-
+			
 			File file = new File(entry);
 			if (!file.exists()) {
 				continue;
@@ -143,9 +143,9 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 			}
 		}
 	}
-
+	
 	protected void addDirectoryToCompilationUnit(Path dirPath, GroovyLSCompilationUnit compilationUnit,
-			FileContentsTracker fileContentsTracker, Set<URI> changedUris) {
+	                                             FileContentsTracker fileContentsTracker, Set<URI> changedUris) {
 		try {
 			if (Files.exists(dirPath)) {
 				Files.walk(dirPath).forEach((filePath) -> {
@@ -163,14 +163,16 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 					}
 				});
 			}
-
+			
 		} catch (IOException e) {
 			System.err.println("Failed to walk directory for source files: " + dirPath);
 		}
 		fileContentsTracker.getOpenURIs().forEach(uri -> {
-			Path openPath = Paths.get(uri);
-			if (!openPath.normalize().startsWith(dirPath.normalize())) {
-				return;
+			if (!Objects.equals(uri.getScheme(), INMEMORY)) {
+				Path openPath = Paths.get(uri);
+				if (!openPath.normalize().startsWith(dirPath.normalize())) {
+					return;
+				}
 			}
 			if (changedUris != null && !changedUris.contains(uri)) {
 				return;
@@ -179,13 +181,20 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 			addOpenFileToCompilationUnit(uri, contents, compilationUnit);
 		});
 	}
-
+	
 	protected void addOpenFileToCompilationUnit(URI uri, String contents, GroovyLSCompilationUnit compilationUnit) {
-		Path filePath = Paths.get(uri);
-		SourceUnit sourceUnit = new SourceUnit(filePath.toString(),
-				new StringReaderSourceWithURI(contents, uri, compilationUnit.getConfiguration()),
-				compilationUnit.getConfiguration(), compilationUnit.getClassLoader(),
-				compilationUnit.getErrorCollector());
+		String path =null;
+		if (!Objects.equals(uri.getScheme(), INMEMORY)) {
+			Path filePath = Paths.get(uri);
+			path = filePath.toString();
+		} else {
+			path = uri.getPath();
+		}
+		
+		SourceUnit sourceUnit = new SourceUnit(path,
+			new StringReaderSourceWithURI(contents, uri, compilationUnit.getConfiguration()),
+			compilationUnit.getConfiguration(), compilationUnit.getClassLoader(),
+			compilationUnit.getErrorCollector());
 		compilationUnit.addSource(sourceUnit);
 	}
 }

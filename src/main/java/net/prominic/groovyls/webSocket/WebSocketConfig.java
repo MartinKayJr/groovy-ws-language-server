@@ -19,14 +19,12 @@ public class WebSocketConfig {
 	
 	@Bean
 	public ServerEndpointRegistration serverEndpointRegistration(){
-		ServerEndpointRegistration serverEndpointRegistration = new ServerEndpointRegistration("/groovy", GroovyLspEndpoint.class){
+		return new ServerEndpointRegistration("/groovy", GroovyLspEndpoint.class){
 			@Override
 			public void modifyHandshake(ServerEndpointConfig sec, HandshakeRequest request, HandshakeResponse response) {
 				sec.getUserProperties().put(IP, ((HttpSession) request.getHttpSession()).getAttribute(IP));
 			}
 		};
-		
-		return serverEndpointRegistration;
 	}
 	@Bean
 	public ServerEndpointExporter serverEndpointExporter() {
