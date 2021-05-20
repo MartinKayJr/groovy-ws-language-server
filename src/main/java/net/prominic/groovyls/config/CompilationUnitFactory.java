@@ -62,7 +62,7 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 	public GroovyLSCompilationUnit create(Path workspaceRoot, FileContentsTracker fileContentsTracker) {
 		CompilerConfiguration config = getConfiguration();
 		
-		GroovyClassLoader classLoader = new GroovyClassLoader(ClassLoader.getSystemClassLoader().getParent(), config,
+		GroovyClassLoader classLoader = new GroovyClassLoader(Thread.currentThread().getContextClassLoader(), config,
 			true);
 		
 		Set<URI> changedUris = fileContentsTracker.getChangedURIs();
