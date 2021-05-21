@@ -25,6 +25,7 @@ import net.prominic.groovyls.compiler.control.io.StringReaderSourceWithURI;
 import net.prominic.groovyls.util.FileContentsTracker;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.control.customizers.ImportCustomizer;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,6 +62,14 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 	
 	public GroovyLSCompilationUnit create(Path workspaceRoot, FileContentsTracker fileContentsTracker) {
 		CompilerConfiguration config = getConfiguration();
+		ImportCustomizer importCustomizer = new ImportCustomizer();
+		importCustomizer.addImports("com.huya.gaia.core.flow.Flow");
+		importCustomizer.addImports("com.huya.gaia.core.component.PublicFunction");
+		importCustomizer.addImports("com.huya.gaia.plugin.http.interceptor.DefaultGaiaHttpInterceptor");
+		importCustomizer.addImports("org.springframework.http.HttpRequest");
+		importCustomizer.addImports("org.springframework.http.ResponseEntity");
+		config.addCompilationCustomizers(importCustomizer);
+		
 		
 		GroovyClassLoader classLoader = new GroovyClassLoader(Thread.currentThread().getContextClassLoader(), config,
 			true);

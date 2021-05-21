@@ -1,6 +1,12 @@
+import groovy.transform.ToString
+
+@ToString
+@org.codehaus.groovy.transform.WithComponent
 class Definitions {
   public int memberVar
   def agg
   def ds=1
   public String str=""
+
+
 }

@@ -483,8 +483,8 @@ public class CompletionProvider {
 		try {
 			ScanResult scan = new ClassGraph().overrideClassLoaders(classLoader).enableClassInfo().enableSystemJarsAndModules()
 			                                  .scan();
-			scan.getAllClasses().addAll(ScanUtil.res.getAllClasses());
-			scan.getPackageInfo().addAll(ScanUtil.res.getPackageInfo());
+			scan.getAllClasses().addAll(ScanUtil.getInstance().getRes().getAllClasses());
+			scan.getPackageInfo().addAll(ScanUtil.getInstance().getRes().getPackageInfo());
 			return scan;
 		} catch (ClassGraphException e) {
 		}

@@ -2,6 +2,7 @@ package org.codehaus.groovy.control;
 
 import com.google.common.io.CharStreams;
 import lombok.SneakyThrows;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.control.io.FileReaderSource;
 import org.junit.jupiter.api.Test;
@@ -28,8 +29,7 @@ public class CompilationUnitTest {
 		SourceUnit sourceUnit = SourceUnit.create("Definitions.groovy", CharStreams.toString(new InputStreamReader(inputStream)));
 		compilationUnit.addSource(sourceUnit);
 		compilationUnit.compile(6);
-		FieldNode field = compilationUnit.getAST().getClass("Definitions").getField("memberVar");
-		List<FieldNode> fields = compilationUnit.getAST().getClass("Definitions").getFields();
+		ClassNode classNode = compilationUnit.getAST().getClass("Definitions");
 		System.out.println();
 	}
 	
