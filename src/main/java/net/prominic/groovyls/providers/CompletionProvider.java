@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import net.prominic.groovyls.util.ScanUtil;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
@@ -519,12 +518,4 @@ public class CompletionProvider {
 		return edit;
 	}
 
-	private ScanResult scanClasses() {
-		try {
-			return new ClassGraph().overrideClassLoaders(classLoader).enableClassInfo().enableSystemJarsAndModules()
-					.scan();
-		} catch (ClassGraphException e) {
-		}
-		return null;
-	}
 }
