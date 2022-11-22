@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -489,7 +489,7 @@ class GroovyServicesDefinitionTests {
 		Assertions.assertEquals(1, location.getRange().getEnd().getCharacter());
 	}
 
-	//--- parameters
+	// --- parameters
 
 	@Test
 	void testParameterDefinitionFromDeclarationInConstructor() throws Exception {

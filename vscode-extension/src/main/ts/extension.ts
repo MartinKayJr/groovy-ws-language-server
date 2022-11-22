@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import {
   LanguageClient,
   LanguageClientOptions,
   Executable,
-} from "vscode-languageclient";
+} from "vscode-languageclient/node";
 
 const MISSING_JAVA_ERROR =
   "Could not locate valid JDK. To configure JDK manually, use the groovy.java.home setting.";

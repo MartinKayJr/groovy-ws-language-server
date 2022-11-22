@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2016 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -343,7 +343,7 @@ public class GroovyASTUtils {
                     score++;
                 }
             } else if (paramType != null) {
-                //extra parameters are like a type not matching
+                // extra parameters are like a type not matching
                 score++;
             }
         }
@@ -370,6 +370,9 @@ public class GroovyASTUtils {
             return new Range(new Position(0, 0), new Position(0, 0));
         }
         Range nodeRange = GroovyLanguageServerUtils.astNodeToRange(afterNode);
+        if (nodeRange == null) {
+            return new Range(new Position(0, 0), new Position(0, 0));
+        }
         Position position = new Position(nodeRange.getEnd().getLine() + 1, 0);
         return new Range(position, position);
     }

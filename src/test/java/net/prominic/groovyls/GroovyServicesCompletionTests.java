@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -274,7 +274,7 @@ class GroovyServicesCompletionTests {
 
 		TextDocumentIdentifier textDocument = new TextDocumentIdentifier(uri);
 
-		//this first test should include both methods...
+		// this first test should include both methods...
 		Position position = new Position(2, 11);
 		Either<List<CompletionItem>, CompletionList> result = services
 				.completion(new CompletionParams(textDocument, position)).get();
@@ -287,7 +287,7 @@ class GroovyServicesCompletionTests {
 		}).collect(Collectors.toList());
 		Assertions.assertEquals(2, filteredItems.size());
 
-		//...and this one should only include the one with the longer name
+		// ...and this one should only include the one with the longer name
 		position = new Position(2, 13);
 		result = services.completion(new CompletionParams(textDocument, position)).get();
 		Assertions.assertTrue(result.isLeft());
@@ -573,6 +573,59 @@ class GroovyServicesCompletionTests {
 		List<CompletionItem> items = result.getLeft();
 		List<CompletionItem> filteredItems = items.stream().filter(item -> {
 			return item.getLabel().equals("localVar") && item.getKind().equals(CompletionItemKind.Variable);
+		}).collect(Collectors.toList());
+		Assertions.assertEquals(1, filteredItems.size());
+	}
+
+	@Test
+	void testOwnClass() throws Exception {
+		Path filePath = srcRoot.resolve("Completion.groovy");
+		String uri = filePath.toUri().toString();
+		StringBuilder contents = new StringBuilder();
+		contents.append("package com.example;\n");
+		contents.append("class Completion {\n");
+		contents.append("  public Completion() {\n");
+		contents.append("    Completio\n");
+		contents.append("  }\n");
+		contents.append("}");
+		TextDocumentItem textDocumentItem = new TextDocumentItem(uri, LANGUAGE_GROOVY, 1, contents.toString());
+		services.didOpen(new DidOpenTextDocumentParams(textDocumentItem));
+		TextDocumentIdentifier textDocument = new TextDocumentIdentifier(uri);
+		Position position = new Position(3, 13);
+		Either<List<CompletionItem>, CompletionList> result = services
+				.completion(new CompletionParams(textDocument, position)).get();
+		Assertions.assertTrue(result.isLeft());
+		List<CompletionItem> items = result.getLeft();
+		Assertions.assertTrue(items.size() > 0);
+		List<CompletionItem> filteredItems = items.stream().filter(item -> {
+			return item.getLabel().equals("Completion") && item.getDetail().equals("com.example")
+					&& item.getKind().equals(CompletionItemKind.Class);
+		}).collect(Collectors.toList());
+		Assertions.assertEquals(1, filteredItems.size());
+	}
+
+	@Test
+	void testSystemClass() throws Exception {
+		Path filePath = srcRoot.resolve("Completion.groovy");
+		String uri = filePath.toUri().toString();
+		StringBuilder contents = new StringBuilder();
+		contents.append("class Completion {\n");
+		contents.append("  public Completion() {\n");
+		contents.append("    ArrayLis\n");
+		contents.append("  }\n");
+		contents.append("}");
+		TextDocumentItem textDocumentItem = new TextDocumentItem(uri, LANGUAGE_GROOVY, 1, contents.toString());
+		services.didOpen(new DidOpenTextDocumentParams(textDocumentItem));
+		TextDocumentIdentifier textDocument = new TextDocumentIdentifier(uri);
+		Position position = new Position(2, 12);
+		Either<List<CompletionItem>, CompletionList> result = services
+				.completion(new CompletionParams(textDocument, position)).get();
+		Assertions.assertTrue(result.isLeft());
+		List<CompletionItem> items = result.getLeft();
+		Assertions.assertTrue(items.size() > 0);
+		List<CompletionItem> filteredItems = items.stream().filter(item -> {
+			return item.getLabel().equals("ArrayList") && item.getDetail().equals("java.util")
+					&& item.getKind().equals(CompletionItemKind.Class);
 		}).collect(Collectors.toList());
 		Assertions.assertEquals(1, filteredItems.size());
 	}

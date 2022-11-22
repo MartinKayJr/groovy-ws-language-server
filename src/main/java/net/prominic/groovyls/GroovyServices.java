@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.ErrorCollector;
-import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.codehaus.groovy.control.Phases;
 import org.codehaus.groovy.control.messages.Message;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -87,6 +86,10 @@ import org.eclipse.lsp4j.services.LanguageClientAware;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.eclipse.lsp4j.services.WorkspaceService;
 
+import groovy.lang.GroovyClassLoader;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassGraphException;
+import io.github.classgraph.ScanResult;
 import net.prominic.groovyls.compiler.ast.ASTNodeVisitor;
 import net.prominic.groovyls.compiler.control.GroovyLSCompilationUnit;
 import net.prominic.groovyls.config.ICompilationUnitFactory;
@@ -114,6 +117,8 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 	private ASTNodeVisitor astVisitor;
 	private Map<URI, List<Diagnostic>> prevDiagnosticsByFile;
 	private FileContentsTracker fileContentsTracker = new FileContentsTracker();
+	private ScanResult classGraphScanResult = null;
+	private GroovyClassLoader classLoader = null;
 	private URI previousContext = null;
 
 	public GroovyServices(ICompilationUnitFactory factory) {
@@ -239,20 +244,20 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 			}
 			DidChangeTextDocumentParams didChangeParams = new DidChangeTextDocumentParams(versionedTextDocument,
 					Collections.singletonList(changeEvent));
-			//if the offset node is null, there is probably a syntax error.
-			//a completion request is usually triggered by the . character, and
-			//if there is no property name after the dot, it will cause a syntax
-			//error.
-			//this hack adds a placeholder property name in the hopes that it
-			//will correctly create a PropertyExpression to use for completion.
-			//we'll restore the original text after we're done handling the
-			//completion request.
+			// if the offset node is null, there is probably a syntax error.
+			// a completion request is usually triggered by the . character, and
+			// if there is no property name after the dot, it will cause a syntax
+			// error.
+			// this hack adds a placeholder property name in the hopes that it
+			// will correctly create a PropertyExpression to use for completion.
+			// we'll restore the original text after we're done handling the
+			// completion request.
 			didChange(didChangeParams);
 		}
 
 		CompletableFuture<Either<List<CompletionItem>, CompletionList>> result = null;
 		try {
-			CompletionProvider provider = new CompletionProvider(astVisitor, compilationUnit.getClassLoader());
+			CompletionProvider provider = new CompletionProvider(astVisitor, classGraphScanResult);
 			result = provider.provideCompletion(params.getTextDocument(), params.getPosition(), params.getContext());
 		} finally {
 			if (originalSource != null) {
@@ -297,14 +302,14 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 					new Range(position, position), 0, ")");
 			DidChangeTextDocumentParams didChangeParams = new DidChangeTextDocumentParams(versionedTextDocument,
 					Collections.singletonList(changeEvent));
-			//if the offset node is null, there is probably a syntax error.
-			//a signature help request is usually triggered by the ( character,
-			//and if there is no matching ), it will cause a syntax error.
-			//this hack adds a placeholder ) character in the hopes that it
-			//will correctly create a ArgumentListExpression to use for
-			//signature help.
-			//we'll restore the original text after we're done handling the
-			//signature help request.
+			// if the offset node is null, there is probably a syntax error.
+			// a signature help request is usually triggered by the ( character,
+			// and if there is no matching ), it will cause a syntax error.
+			// this hack adds a placeholder ) character in the hopes that it
+			// will correctly create a ArgumentListExpression to use for
+			// signature help.
+			// we'll restore the original text after we're done handling the
+			// signature help request.
 			didChange(didChangeParams);
 		}
 
@@ -413,6 +418,20 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 			if (targetDirectory != null && !targetDirectory.exists() && !targetDirectory.mkdirs()) {
 				System.err.println("Failed to create target directory: " + targetDirectory.getAbsolutePath());
 			}
+			GroovyClassLoader newClassLoader = compilationUnit.getClassLoader();
+			if (!newClassLoader.equals(classLoader)) {
+				classLoader = newClassLoader;
+
+				try {
+					classGraphScanResult = new ClassGraph().overrideClassLoaders(classLoader).enableClassInfo()
+							.enableSystemJarsAndModules()
+							.scan();
+				} catch (ClassGraphException e) {
+					classGraphScanResult = null;
+				}
+			}
+		} else {
+			classGraphScanResult = null;
 		}
 
 		return compilationUnit != null && compilationUnit.equals(oldCompilationUnit);
@@ -443,11 +462,11 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 			return;
 		}
 		try {
-			//AST is completely built after the canonicalization phase
-			//for code intelligence, we shouldn't need to go further
-			//http://groovy-lang.org/metaprogramming.html#_compilation_phases_guide
+			// AST is completely built after the canonicalization phase
+			// for code intelligence, we shouldn't need to go further
+			// http://groovy-lang.org/metaprogramming.html#_compilation_phases_guide
 			compilationUnit.compile(Phases.CANONICALIZATION);
-		} catch (MultipleCompilationErrorsException e) {
+		} catch (CompilationFailedException e) {
 			// ignore
 		} catch (CompilationFailedException e) {
 			// ignore

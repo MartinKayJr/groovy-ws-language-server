@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ public class TypeDefinitionProvider {
 	public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> provideTypeDefinition(
 			TextDocumentIdentifier textDocument, Position position) {
 		if (ast == null) {
-			//this shouldn't happen, but let's avoid an exception if something
-			//goes terribly wrong.
+			// this shouldn't happen, but let's avoid an exception if something
+			// goes terribly wrong.
 			return CompletableFuture.completedFuture(Either.forLeft(Collections.emptyList()));
 		}
 		URI uri = URI.create(textDocument.getUri());
@@ -65,8 +65,11 @@ public class TypeDefinitionProvider {
 			definitionURI = uri;
 		}
 
-		Location location = new Location(definitionURI.toString(),
-				GroovyLanguageServerUtils.astNodeToRange(definitionNode));
+		Location location = GroovyLanguageServerUtils.astNodeToLocation(definitionNode, definitionURI);
+		if (location == null) {
+			return CompletableFuture.completedFuture(Either.forLeft(Collections.emptyList()));
+		}
+
 		return CompletableFuture.completedFuture(Either.forLeft(Collections.singletonList(location)));
 	}
 }

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019 Prominic.NET, Inc.
+// Copyright 2022 Prominic.NET, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 import net.prominic.groovyls.util.ScanUtil;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.ImportNode;
@@ -49,38 +50,38 @@ import org.eclipse.lsp4j.CompletionContext;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.CompletionList;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.MarkupKind;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
-import groovy.lang.GroovyClassLoader;
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassGraphException;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.PackageInfo;
 import io.github.classgraph.ScanResult;
 import net.prominic.groovyls.compiler.ast.ASTNodeVisitor;
 import net.prominic.groovyls.compiler.util.GroovyASTUtils;
+import net.prominic.groovyls.compiler.util.GroovydocUtils;
 import net.prominic.groovyls.util.GroovyLanguageServerUtils;
 
 public class CompletionProvider {
 	private ASTNodeVisitor ast;
-	private GroovyClassLoader classLoader;
+	private ScanResult classGraphScanResult;
 	private int maxItemCount = 1000;
 	private boolean isIncomplete = false;
 
-	public CompletionProvider(ASTNodeVisitor ast, GroovyClassLoader classLoader) {
+	public CompletionProvider(ASTNodeVisitor ast, ScanResult classGraphScanResult) {
 		this.ast = ast;
-		this.classLoader = classLoader;
+		this.classGraphScanResult = classGraphScanResult;
 	}
 
 	public CompletableFuture<Either<List<CompletionItem>, CompletionList>> provideCompletion(
 			TextDocumentIdentifier textDocument, Position position, CompletionContext context) {
 		if (ast == null) {
-			//this shouldn't happen, but let's avoid an exception if something
-			//goes terribly wrong.
+			// this shouldn't happen, but let's avoid an exception if something
+			// goes terribly wrong.
 			return CompletableFuture.completedFuture(Either.forLeft(Collections.emptyList()));
 		}
 		URI uri = URI.create(textDocument.getUri());
@@ -124,6 +125,9 @@ public class CompletionProvider {
 	private void populateItemsFromPropertyExpression(PropertyExpression propExpr, Position position,
 			List<CompletionItem> items) {
 		Range propertyRange = GroovyLanguageServerUtils.astNodeToRange(propExpr.getProperty());
+		if (propertyRange == null) {
+			return;
+		}
 		String memberName = getMemberName(propExpr.getPropertyAsString(), propertyRange, position);
 		populateItemsFromExpression(propExpr.getObjectExpression(), memberName, items);
 	}
@@ -131,13 +135,19 @@ public class CompletionProvider {
 	private void populateItemsFromMethodCallExpression(MethodCallExpression methodCallExpr, Position position,
 			List<CompletionItem> items) {
 		Range methodRange = GroovyLanguageServerUtils.astNodeToRange(methodCallExpr.getMethod());
+		if (methodRange == null) {
+			return;
+		}
 		String memberName = getMemberName(methodCallExpr.getMethodAsString(), methodRange, position);
 		populateItemsFromExpression(methodCallExpr.getObjectExpression(), memberName, items);
 	}
 
 	private void populateItemsFromImportNode(ImportNode importNode, Position position, List<CompletionItem> items) {
 		Range importRange = GroovyLanguageServerUtils.astNodeToRange(importNode);
-		//skip the "import " at the beginning
+		if (importRange == null) {
+			return;
+		}
+		// skip the "import " at the beginning
 		importRange.setStart(new Position(importRange.getEnd().getLine(),
 				importRange.getEnd().getCharacter() - importNode.getType().getName().length()));
 		String importText = getMemberName(importNode.getType().getName(), importRange, position);
@@ -170,16 +180,19 @@ public class CompletionProvider {
 			if (classNode.getNameWithoutPackage().startsWith(importText)) {
 				item.setSortText(classNode.getNameWithoutPackage());
 			}
+			String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(classNode.getGroovydoc());
+			if (markdownDocs != null) {
+				item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+			}
 			return item;
 		}).collect(Collectors.toList());
 		items.addAll(localClassItems);
 
-		ScanResult scanResult = scanClasses();
-		if (scanResult == null) {
+		if (classGraphScanResult == null) {
 			return;
 		}
-		List<ClassInfo> classes = scanResult.getAllClasses();
-		List<PackageInfo> packages = scanResult.getPackageInfo();
+		List<ClassInfo> classes = classGraphScanResult.getAllClasses();
+		List<PackageInfo> packages = classGraphScanResult.getPackageInfo();
 
 		List<CompletionItem> packageItems = packages.stream().filter(packageInfo -> {
 			String packageName = packageInfo.getName();
@@ -230,6 +243,9 @@ public class CompletionProvider {
 		}
 		ClassNode parentClassNode = (ClassNode) parentNode;
 		Range classRange = GroovyLanguageServerUtils.astNodeToRange(classNode);
+		if (classRange == null) {
+			return;
+		}
 		String className = getMemberName(classNode.getUnresolvedName(), classRange, position);
 		if (classNode.equals(parentClassNode.getUnresolvedSuperClass())) {
 			populateTypes(classNode, className, new HashSet<>(), true, false, false, items);
@@ -241,6 +257,9 @@ public class CompletionProvider {
 	private void populateItemsFromConstructorCallExpression(ConstructorCallExpression constructorCallExpr,
 			Position position, List<CompletionItem> items) {
 		Range typeRange = GroovyLanguageServerUtils.astNodeToRange(constructorCallExpr.getType());
+		if (typeRange == null) {
+			return;
+		}
 		String typeName = getMemberName(constructorCallExpr.getType().getNameWithoutPackage(), typeRange, position);
 		populateTypes(constructorCallExpr, typeName, new HashSet<>(), true, false, false, items);
 	}
@@ -248,6 +267,9 @@ public class CompletionProvider {
 	private void populateItemsFromVariableExpression(VariableExpression varExpr, Position position,
 			List<CompletionItem> items) {
 		Range varRange = GroovyLanguageServerUtils.astNodeToRange(varExpr);
+		if (varRange == null) {
+			return;
+		}
 		String memberName = getMemberName(varExpr.getName(), varRange, position);
 		populateItemsFromScope(varExpr, memberName, items);
 	}
@@ -256,7 +278,7 @@ public class CompletionProvider {
 			String memberNamePrefix, Set<String> existingNames, List<CompletionItem> items) {
 		List<CompletionItem> propItems = properties.stream().filter(property -> {
 			String name = property.getName();
-			//sometimes, a property and a field will have the same name
+			// sometimes, a property and a field will have the same name
 			if (name.startsWith(memberNamePrefix) && !existingNames.contains(name)) {
 				existingNames.add(name);
 				return true;
@@ -266,12 +288,16 @@ public class CompletionProvider {
 			CompletionItem item = new CompletionItem();
 			item.setLabel(property.getName());
 			item.setKind(GroovyLanguageServerUtils.astNodeToCompletionItemKind(property));
+			String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(property.getGroovydoc());
+			if (markdownDocs != null) {
+				item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+			}
 			return item;
 		}).collect(Collectors.toList());
 		items.addAll(propItems);
 		List<CompletionItem> fieldItems = fields.stream().filter(field -> {
 			String name = field.getName();
-			//sometimes, a property and a field will have the same name
+			// sometimes, a property and a field will have the same name
 			if (name.startsWith(memberNamePrefix) && !existingNames.contains(name)) {
 				existingNames.add(name);
 				return true;
@@ -281,6 +307,10 @@ public class CompletionProvider {
 			CompletionItem item = new CompletionItem();
 			item.setLabel(field.getName());
 			item.setKind(GroovyLanguageServerUtils.astNodeToCompletionItemKind(field));
+			String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(field.getGroovydoc());
+			if (markdownDocs != null) {
+				item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+			}
 			return item;
 		}).collect(Collectors.toList());
 		items.addAll(fieldItems);
@@ -290,7 +320,7 @@ public class CompletionProvider {
 			List<CompletionItem> items) {
 		List<CompletionItem> methodItems = methods.stream().filter(method -> {
 			String methodName = method.getName();
-			//overloads can cause duplicates
+			// overloads can cause duplicates
 			if (methodName.startsWith(memberNamePrefix) && !existingNames.contains(methodName)) {
 				existingNames.add(methodName);
 				return true;
@@ -300,6 +330,10 @@ public class CompletionProvider {
 			CompletionItem item = new CompletionItem();
 			item.setLabel(method.getName());
 			item.setKind(GroovyLanguageServerUtils.astNodeToCompletionItemKind(method));
+			String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(method.getGroovydoc());
+			if (markdownDocs != null) {
+				item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+			}
 			return item;
 		}).collect(Collectors.toList());
 		items.addAll(methodItems);
@@ -321,7 +355,7 @@ public class CompletionProvider {
 		List<CompletionItem> variableItems = variableScope.getDeclaredVariables().values().stream().filter(variable -> {
 
 			String variableName = variable.getName();
-			//overloads can cause duplicates
+			// overloads can cause duplicates
 			if (variableName.startsWith(memberNamePrefix) && !existingNames.contains(variableName)) {
 				existingNames.add(variableName);
 				return true;
@@ -331,6 +365,13 @@ public class CompletionProvider {
 			CompletionItem item = new CompletionItem();
 			item.setLabel(variable.getName());
 			item.setKind(GroovyLanguageServerUtils.astNodeToCompletionItemKind((ASTNode) variable));
+			if (variable instanceof AnnotatedNode) {
+				AnnotatedNode annotatedVar = (AnnotatedNode) variable;
+				String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(annotatedVar.getGroovydoc());
+				if (markdownDocs != null) {
+					item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+				}
+			}
 			return item;
 		}).collect(Collectors.toList());
 		items.addAll(variableItems);
@@ -354,11 +395,7 @@ public class CompletionProvider {
 			}
 			current = ast.getParent(current);
 		}
-		if (namePrefix.length() == 0) {
-			isIncomplete = true;
-		} else {
-			populateTypes(node, namePrefix, existingNames, items);
-		}
+		populateTypes(node, namePrefix, existingNames, items);
 	}
 
 	private void populateTypes(ASTNode offsetNode, String namePrefix, Set<String> existingNames,
@@ -398,6 +435,10 @@ public class CompletionProvider {
 			item.setLabel(classNode.getNameWithoutPackage());
 			item.setKind(GroovyLanguageServerUtils.astNodeToCompletionItemKind(classNode));
 			item.setDetail(packageName);
+			String markdownDocs = GroovydocUtils.groovydocToMarkdownDescription(classNode.getGroovydoc());
+			if (markdownDocs != null) {
+				item.setDocumentation(new MarkupContent(MarkupKind.MARKDOWN, markdownDocs));
+			}
 			if (packageName != null && !packageName.equals(enclosingPackageName) && !importNames.contains(className)) {
 				List<TextEdit> additionalTextEdits = new ArrayList<>();
 				TextEdit addImportEdit = createAddImportTextEdit(className, addImportRange);
@@ -408,11 +449,10 @@ public class CompletionProvider {
 		}).collect(Collectors.toList());
 		items.addAll(localClassItems);
 
-		ScanResult scanResult = scanClasses();
-		if (scanResult == null) {
+		if (classGraphScanResult == null) {
 			return;
 		}
-		List<ClassInfo> classes = scanResult.getAllClasses();
+		List<ClassInfo> classes = classGraphScanResult.getAllClasses();
 
 		List<CompletionItem> classItems = classes.stream().filter(classInfo -> {
 			if (isIncomplete) {
@@ -481,11 +521,8 @@ public class CompletionProvider {
 
 	private ScanResult scanClasses() {
 		try {
-			ScanResult scan = new ClassGraph().overrideClassLoaders(classLoader).enableClassInfo().enableSystemJarsAndModules()
-			                                  .scan();
-			scan.getAllClasses().addAll(ScanUtil.getInstance().getRes().getAllClasses());
-			scan.getPackageInfo().addAll(ScanUtil.getInstance().getRes().getPackageInfo());
-			return scan;
+			return new ClassGraph().overrideClassLoaders(classLoader).enableClassInfo().enableSystemJarsAndModules()
+					.scan();
 		} catch (ClassGraphException e) {
 		}
 		return null;
