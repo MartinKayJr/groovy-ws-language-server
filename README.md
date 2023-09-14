@@ -33,3 +33,29 @@ java -jar groovy-language-server-all.jar
 ```
 
 Language server protocol messages are passed using standard I/O.
+
+
+## 中文
+
+目前语言服务支持以下请求：
+
+- 自动补全
+- 定义
+- 文档符号
+- 悬停
+- 参考
+- 改名
+- 签名帮助
+- 象征
+- 类型定义
+
+此项目的websocket功能由 wangxi761/groovy-language-server 完成，他将websocket版本的提交放到了websocket分支下，
+所以难以发现，我对其进行了测试，由monaco作为IDE与当前项目进行交互，可以实现代码补全，悬停，定义，参考，改名等功能。
+
+## Monaco Demo
+下面是我的一个monaco demo，可以实现代码补全，悬停，定义，参考，改名等功能。
+[Monaco Groovy Demo](https://github.com/MartinKayJr/groovy-monaco-ide)
+
+## 后续需要完成的功能
+
+- [ ] 支持Java成员变量的补全 例如System.out，能识别out的所有成员(方法或者变量)。
