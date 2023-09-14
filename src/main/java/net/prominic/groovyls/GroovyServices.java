@@ -402,6 +402,7 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 					Files.walk(targetDirectory.toPath()).sorted(Comparator.reverseOrder()).map(Path::toFile)
 							.forEach(File::delete);
 				} catch (IOException e) {
+					e.printStackTrace();
 					System.err.println("Failed to delete target directory: " + targetDirectory.getAbsolutePath());
 					compilationUnit = null;
 					return false;
@@ -427,6 +428,7 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 							.enableSystemJarsAndModules()
 							.scan();
 				} catch (ClassGraphException e) {
+					e.printStackTrace();
 					classGraphScanResult = null;
 				}
 			}
@@ -467,11 +469,14 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 			// http://groovy-lang.org/metaprogramming.html#_compilation_phases_guide
 			compilationUnit.compile(Phases.CANONICALIZATION);
 		} catch (CompilationFailedException e) {
+			e.printStackTrace();
 			// ignore
 		} catch (GroovyBugError e) {
+			e.printStackTrace();
 			System.err.println("Unexpected exception in language server when compiling Groovy.");
 			e.printStackTrace(System.err);
 		} catch (Exception e) {
+			e.printStackTrace();
 			System.err.println("Unexpected exception in language server when compiling Groovy.");
 			e.printStackTrace(System.err);
 		}

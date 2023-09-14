@@ -93,6 +93,7 @@ public class CompletionProvider {
 		isIncomplete = false;
 		List<CompletionItem> items = new ArrayList<>();
 
+
 		if (offsetNode instanceof PropertyExpression) {
 			populateItemsFromPropertyExpression((PropertyExpression) offsetNode, position, items);
 		} else if (parentNode instanceof PropertyExpression) {

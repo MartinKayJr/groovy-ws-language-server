@@ -81,11 +81,13 @@ public class Ranges {
 				builder.append((char) reader.read());
 			}
 		} catch (IOException e) {
+			e.printStackTrace();
 			return null;
 		}
 		try {
 			reader.close();
 		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return builder.toString();
 	}

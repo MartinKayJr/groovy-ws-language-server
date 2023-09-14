@@ -60,11 +60,13 @@ public class Positions {
 					}
 				}
 			} catch (IOException e) {
+				e.printStackTrace();
 				return -1;
 			}
 			try {
 				reader.close();
 			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 		return currentIndex + character;

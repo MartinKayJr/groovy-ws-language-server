@@ -178,6 +178,7 @@ public class CompilationUnitFactory implements ICompilationUnitFactory {
 			}
 
 		} catch (IOException e) {
+			e.printStackTrace();
 			System.err.println("Failed to walk directory for source files: " + dirPath);
 		}
 		fileContentsTracker.getOpenURIs().forEach(uri -> {

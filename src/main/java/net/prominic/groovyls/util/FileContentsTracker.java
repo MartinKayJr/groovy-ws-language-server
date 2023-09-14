@@ -105,12 +105,14 @@ public class FileContentsTracker {
 				}
 				return builder.toString();
 			} catch (IOException e) {
+				e.printStackTrace();
 				return null;
 			} finally {
 				if (reader != null) {
 					try {
 						reader.close();
 					} catch (IOException e) {
+						e.printStackTrace();
 					}
 				}
 			}

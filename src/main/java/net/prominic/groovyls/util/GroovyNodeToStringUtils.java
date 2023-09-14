@@ -60,6 +60,7 @@ public class GroovyNodeToStringUtils {
 		try {
 			superClass = classNode.getSuperClass();
 		} catch (NoClassDefFoundError e) {
+			e.printStackTrace();
 			// this is fine, we'll just treat it as null
 		}
 		if (superClass != null && !superClass.getName().equals(JAVA_OBJECT)) {
