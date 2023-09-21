@@ -469,7 +469,6 @@ public class GroovyServices implements TextDocumentService, WorkspaceService, La
 			// http://groovy-lang.org/metaprogramming.html#_compilation_phases_guide
 			compilationUnit.compile(Phases.CANONICALIZATION);
 		} catch (CompilationFailedException e) {
-			e.printStackTrace();
 			// ignore
 		} catch (GroovyBugError e) {
 			e.printStackTrace();

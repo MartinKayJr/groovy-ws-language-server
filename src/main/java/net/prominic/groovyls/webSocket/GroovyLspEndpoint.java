@@ -1,17 +1,17 @@
 package net.prominic.groovyls.webSocket;
 
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.Session;
 import lombok.extern.slf4j.Slf4j;
 import net.prominic.groovyls.GroovyLanguageServer;
 import net.prominic.groovyls.config.CompilationUnitFactory;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageClientAware;
-import org.eclipse.lsp4j.websocket.WebSocketEndpoint;
+import org.eclipse.lsp4j.websocket.jakarta.WebSocketEndpoint;
 
-import javax.websocket.CloseReason;
-import javax.websocket.EndpointConfig;
-import javax.websocket.OnError;
-import javax.websocket.Session;
+
 import java.util.Arrays;
 import java.util.Collection;
 
