@@ -56,6 +56,11 @@ Language server protocol messages are passed using standard I/O.
 下面是我的一个monaco demo，可以实现代码补全，悬停，定义，参考，改名等功能。
 [Monaco Groovy Demo](https://github.com/MartinKayJr/groovy-monaco-ide)
 
+## 相比wangxi761/groovy-language-server 我所做的改动
+- [ ] 将spring-boot 从 2.3.x 升级到 3.0.10
+- [ ] 项目启动需要JDK17
+- [ ] lsp4j使用了支持 jakarta 的版本
+
 ## 后续需要完成的功能
 
 - [ ] 支持Java成员变量的补全 例如System.out，能识别out的所有成员(方法或者变量)。
